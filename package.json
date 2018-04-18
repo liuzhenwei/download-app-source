@@ -1,6 +1,6 @@
 {
   "name": "pull-app-source",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "pull-app-source",
   "main": "index.js",
   "bin": {
@@ -13,8 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "download-git-repo": "^1.0.2",
+    "download": "^6.2.5",
     "node-cmd": "^3.0.0",
+    "git-clone": "^0.1.0",
+    "rimraf": "^2.6.2",
     "yargs": "^11.0.0"
   }
 }
