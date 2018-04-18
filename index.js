@@ -2,7 +2,7 @@
 
 var yargs = require('yargs');
 var download = require('download-git-repo');
-var cmd = require('note-cmd');
+var cmd = require('node-cmd');
 
 yargs.parse(process.argv.slice(2), (err, argv, output) => {
 	var path = null, name = null;
@@ -28,14 +28,16 @@ yargs.parse(process.argv.slice(2), (err, argv, output) => {
 				return console.error(err);
 			}
 
-			console.log('Download Success ===================');
+			console.log('Download success ===================');
+
+			console.log('Start init app ===================');
 
 			cmd.get(`npm install --registry https://registry.npm.taobao.org`, (initErr, data) => {
 				if (initErr) {
 					return console.error('Init App Error!');
 				}
 
-				console.log('Init App Success ===================');
+				console.log('Init app success ===================');
 			});
 		});
 	} else {
