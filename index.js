@@ -2,6 +2,7 @@
 
 var yargs = require('yargs');
 var download = require('download-git-repo');
+var cmd = require('note-cmd');
 
 yargs.parse(process.argv.slice(2), (err, argv, output) => {
 	var path = null, name = null;
@@ -20,13 +21,22 @@ yargs.parse(process.argv.slice(2), (err, argv, output) => {
 		}
 	}
 	if (path) {
-		console.log('Downloading ......');
+		console.log('Downloading ...............');
 
-		download(path, './', function (err) {
+		download(path, './', (err) => {
 			if (err) {
 				return console.error(err);
 			}
-			console.log('Success ===================');
+
+			console.log('Download Success ===================');
+
+			cmd.get(`npm install --registry https://registry.npm.taobao.org`, (initErr, data) => {
+				if (initErr) {
+					return console.error('Init App Error!');
+				}
+
+				console.log('Init App Success ===================');
+			});
 		});
 	} else {
 		console.error('path [' + (path || name || '') + '] not found');
