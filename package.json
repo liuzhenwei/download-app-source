@@ -1,0 +1,19 @@
+{
+  "name": "download-app-source",
+  "version": "0.0.1",
+  "description": "download-app-source",
+  "main": "index.js",
+  "bin": {
+    "download-app-source": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "download-git-repo": "^1.0.2",
+    "yargs": "^11.0.0"
+  }
+}
