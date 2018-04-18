@@ -1,10 +1,10 @@
 {
-  "name": "download-app-source",
+  "name": "download-project-source",
   "version": "0.0.1",
-  "description": "download-app-source",
+  "description": "download-project-source",
   "main": "index.js",
   "bin": {
-    "download-app-source": "./index.js"
+    "download-source": "./index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
