@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+var path = require('path');
 var downloadUrl = require('download')
 var gitclone = require('git-clone')
 var rm = require('rimraf').sync
@@ -7,43 +8,48 @@ var yargs = require('yargs');
 var cmd = require('node-cmd');
 
 yargs.parse(process.argv.slice(2), (err, argv, output) => {
-	var path = null, name = null;
-	if (argv.path) {
-		path = argv.path;
+	var repo = null, name = null;
+	var {help, version, $0, ...args} = argv;
+
+	if (args.repo) {
+		repo = args.repo;
 	} else {
-		name = argv._[0];
+		name = args._[0];
 		try {
-			var appListPath = '../download-app-source/app-list.js';
+			var appListPath = '../pull-app-source/app-list.js';
 			fs.accessSync(path.resolve(appListPath), fs.F_OK);
 
 			var appList = require(appListPath);
-			path = appList[name];
+			repo = appList[name];
 		} catch (error) {
-			return console.error('path [' + (name || '') + '] not found');
+			return console.error('repository [' + (name || '') + '] not found');
 		}
 	}
-	if (path) {
+
+	if (repo) {
 		console.log('Downloading ...............');
 
-		download(path, './', (err) => {
+		download(repo, args.dest || './', args, (err) => {
 			if (err) {
 				return console.error(err);
 			}
 
 			console.log('Download success ===================');
 
-			console.log('Start init app ===================');
+			if (args.init) {
+				console.log('Start init app ===================');
 
-			cmd.get(`npm install --registry https://registry.npm.taobao.org`, (initErr, data) => {
-				if (initErr) {
-					return console.error('Init App Error!');
-				}
+				cmd.get(`npm install --registry https://registry.npm.taobao.org`, (initErr, data) => {
+					if (initErr) {
+						return console.error('Init app error!');
+					}
 
-				console.log('Init app success ===================');
-			});
+					console.log('Init app success ===================');
+				});
+			}
 		});
 	} else {
-		console.error('path [' + (path || name || '') + '] not found');
+		console.error('repository [' + (path || name || '') + '] not found');
 	}
 });
 
@@ -52,47 +58,65 @@ function download (repo, dest, opts, fn) {
 		fn = opts
 		opts = null
 	}
-	opts = opts || {}
+	opts = opts || {};
 
-	repo = normalize(repo)
-	var url = getUrl(repo, opts)
+	repo = normalize(repo);
 
-// console.log(url, repo);
+	var url = getUrl(repo, opts);
 
 	if (opts.clone) {
-		gitclone(url, dest, { checkout: repo.checkout, shallow: repo.checkout === 'master' }, function (err) {
+		var _dest = dest == './' ? 'tmp' : dest;
+
+		rm(_dest);
+
+		gitclone(url, _dest, { checkout: repo.checkout, shallow: repo.checkout === 'master' }, function (err) {
 			if (err === undefined) {
-				rm(dest + '/.git')
-				fn()
+				rm(_dest + '/.git');
+				if (dest == './') {
+					cmd.get('mv ' + _dest + '/* ' + path.resolve(dest), (mvErr, data) => {
+						if (mvErr) {
+							return console.error('Move files error! [' + mvErr.message + ']');
+						}
+						rm(_dest);
+						fn();
+					});
+				} else {
+					fn();
+				}
 			} else {
-				fn(err)
+				fn(err);
 			}
-		})
+		});
 	} else {
 		downloadUrl(url, dest, { extract: true, strip: 1, mode: '666', headers: { accept: 'application/zip' } }).then(data => {
-			fn()
+			fn();
 		}).catch(err => {
-			fn(err)
-		})
+			fn(err);
+		});
 	}
 }
 
 function normalize (repo) {
 	var regex = /^((github|gitlab|bitbucket):)?((.+):)?([^/]+)\/([^#]+)(#(.+))?$/
 	var match = regex.exec(repo)
-	var type = match[2] || 'custom'
+	var type = match[2] || 'github'
 	var origin = match[4] || null
 	var owner = match[5]
 	var name = match[6]
 	var checkout = match[8] || 'master'
 
 	if (origin == null) {
-		if (type === 'github')
-			origin = 'github.com'
-		else if (type === 'gitlab')
-			origin = 'gitlab.com'
-		else if (type === 'bitbucket')
-			origin = 'bitbucket.org'
+		if ((owner === 'https:' || owner === 'http:') && type === 'github') {
+			type = 'http';
+			origin = repo;
+		} else {
+			if (type === 'github')
+				origin = 'github.com'
+			else if (type === 'gitlab')
+				origin = 'gitlab.com'
+			else if (type === 'bitbucket')
+				origin = 'bitbucket.org'
+		}
 	}
 
 	return {
@@ -125,12 +149,11 @@ function getUrl (repo, opts) {
 	else
 		origin = origin + '/'
 
-	// Build url
+	if (repo.type === 'http') {
+		return repo.origin;
+	}
 	if (opts.clone) {
-		if (repo.type === 'custom')
-			url = repo.owner + '/' + repo.name;
-		else
-			url = origin + repo.owner + '/' + repo.name + '.git'
+		url = origin + repo.owner + '/' + repo.name + '.git'
 	} else {
 		if (repo.type === 'github')
 			url = origin + repo.owner + '/' + repo.name + '/archive/' + repo.checkout + '.zip'
@@ -138,11 +161,7 @@ function getUrl (repo, opts) {
 			url = origin + repo.owner + '/' + repo.name + '/repository/archive.zip?ref=' + repo.checkout
 		else if (repo.type === 'bitbucket')
 			url = origin + repo.owner + '/' + repo.name + '/get/' + repo.checkout + '.zip'
-		else if (repo.type === 'custom')
-			url = repo.owner + '/' + repo.name;
-		else 
-			url = github(repo)
 	}
 
-	return url
+	return url || repo.origin;
 }
